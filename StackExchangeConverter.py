@@ -27,11 +27,24 @@ class User:
         else:
             self.tags[tagName] = 1
 
+    def get_top_tag(self):
+        topTagName = ''
+        topAmount = 0
+        for tagName, amount in self.tags.items():
+            if amount > topAmount:
+                topAmount = amount
+                topTagName = tagName
+        return topTagName
+
 class Post:
     def __init__(self, id, ownerId, accepted):
         self.id = id
         self.ownerId = ownerId
         self.accepted = accepted
+        self.tags = []
+
+    def add_tags(self, tags):
+        self.tags = tags
 
 #list of users
 users = {}
@@ -66,13 +79,26 @@ for event, row in tree:
             #TODO parse tags out
             if row.attrib.get('AcceptedAnswerId', None) is not None and row.attrib.get('OwnerUserId', None) is not None:
                 post = Post(row.attrib['Id'], row.attrib['OwnerUserId'], row.attrib['AcceptedAnswerId'])
+                if row.attrib.get('Tags', None) is not None:
+                    tags = row.attrib['Tags']
+                    tags = tags.replace('><', ',')
+                    tags = tags.replace('>', '')
+                    tags = tags.replace('<', '')
+                    tagList = tags.split(',')
+                    owner = users[row.attrib['OwnerUserId']]
+                    for tag in tagList:
+                        owner.add_tag_count(tag)
+                    post.add_tags(tagList)
                 posts[post.id] = post
         elif postType == '2':
             parentId = row.attrib['ParentId']
             post = posts.get(parentId, None)
             if post is not None:
                 if post.accepted == row.attrib['Id'] and row.attrib.get('OwnerUserId', None) is not None:
-                    users[row.attrib['OwnerUserId']].add_accepted_answer(parentId)
+                    user = users[row.attrib['OwnerUserId']]
+                    user.add_accepted_answer(post.ownerId)
+                    for tag in post.tags:
+                        user.add_tag_count(tag)
                     del posts[parentId]
 f.close()
 del posts
@@ -104,9 +130,11 @@ for user in users.values():
     node.set('id', user.id)
     node.set('label', user.displayName)
     attvalues = etree.SubElement(node, 'attvalues')
-    attvalue = etree.SubElement(attvalues, 'attvalue')
-    attvalue.set('for', '0')
-    attvalue.set('value', 'None')
+    topTag = user.get_top_tag()
+    if topTag is not '':
+        attvalue = etree.SubElement(attvalues, 'attvalue')
+        attvalue.set('for', '0')
+        attvalue.set('value', topTag)
     attvalue = etree.SubElement(attvalues, 'attvalue')
     attvalue.set('for', '1')
     attvalue.set('value', user.reputation)
@@ -129,4 +157,3 @@ tree = etree.ElementTree(gexf)
 f = codecs.open(dataLocation+'/graph.gexf', 'w', "utf-8")
 f.write(minidom.parseString(etree.tostring(gexf, encoding="utf-8")).toprettyxml())
 f.close()
-#tree.write(dataLocation+'/graph.gexf', encoding="utf-8", xml_declaration=True)
