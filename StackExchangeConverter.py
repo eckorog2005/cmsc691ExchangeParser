@@ -1,7 +1,10 @@
 __author__ = 'roger'
 
 import sys
+import codecs
 import xml.etree.cElementTree as etree
+import xml.dom.minidom as minidom
+#import lxml as etree
 import logging
 
 #define user class
@@ -71,6 +74,8 @@ for event, row in tree:
                 if post.accepted == row.attrib['Id'] and row.attrib.get('OwnerUserId', None) is not None:
                     users[row.attrib['OwnerUserId']].add_accepted_answer(parentId)
                     del posts[parentId]
+f.close()
+del posts
 
 #build xml file
 gexf = etree.Element('gexf', xmlns="http://www.gexf.net/1.2draft", version="1.2")
@@ -90,14 +95,38 @@ etree.SubElement(attribute, 'default').text = 0
 attribute = etree.SubElement(attributes, 'attribute', id="3", title="DownVote", type="integer")
 etree.SubElement(attribute, 'default').text = 0
 nodes = etree.SubElement(gexf, 'nodes')
+edges = etree.SubElement(gexf, 'edges')
 
-#build nodes
+#build nodes and edges
+counter = 0
 for user in users.values():
     node = etree.SubElement(nodes, 'node')
     node.set('id', user.id)
     node.set('label', user.displayName)
-    etree.SubElement(node, 'attvalues')
+    attvalues = etree.SubElement(node, 'attvalues')
+    attvalue = etree.SubElement(attvalues, 'attvalue')
+    attvalue.set('for', '0')
+    attvalue.set('value', 'None')
+    attvalue = etree.SubElement(attvalues, 'attvalue')
+    attvalue.set('for', '1')
+    attvalue.set('value', user.reputation)
+    attvalue = etree.SubElement(attvalues, 'attvalue')
+    attvalue.set('for', '2')
+    attvalue.set('value', user.upVotes)
+    attvalue = etree.SubElement(attvalues, 'attvalue')
+    attvalue.set('for', '3')
+    attvalue.set('value', user.downVotes)
+    for link in user.acceptedAnswersPost:
+        edge = etree.SubElement(edges, 'edge')
+        edge.set('id', str(counter))
+        edge.set('source', user.id)
+        edge.set('target', link)
+        counter += 1
+del users
 
 #write xml file (gexf file)
 tree = etree.ElementTree(gexf)
-tree.write(dataLocation+'/graph.gexf', encoding="utf-8", xml_declaration=True)
+f = codecs.open(dataLocation+'/graph.gexf', 'w', "utf-8")
+f.write(minidom.parseString(etree.tostring(gexf, encoding="utf-8")).toprettyxml())
+f.close()
+#tree.write(dataLocation+'/graph.gexf', encoding="utf-8", xml_declaration=True)
