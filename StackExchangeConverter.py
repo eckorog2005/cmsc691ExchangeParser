@@ -17,6 +17,7 @@ class User:
        self.downVotes = downVotes
        self.acceptedAnswersPost = []
        self.tags = {}
+       self.hasEdge = False
 
     def add_accepted_answer(self, postID):
         self.acceptedAnswersPost.append(postID)
@@ -51,8 +52,8 @@ users = {}
 posts = {}
 
 #get command line arguments for files
-usersFile = '/Users.xml'
-postsFile = '/Posts.xml'
+usersFile = 'Users.xml'
+postsFile = 'Posts.xml'
 dataLocation = ''
 if len(sys.argv) == 2:
     dataLocation = sys.argv[1]
@@ -97,6 +98,8 @@ for event, row in tree:
                 if post.accepted == row.attrib['Id'] and row.attrib.get('OwnerUserId', None) is not None:
                     user = users[row.attrib['OwnerUserId']]
                     user.add_accepted_answer(post.ownerId)
+                    user.hasEdge = True
+                    users[post.ownerId].hasEdge = True
                     for tag in post.tags:
                         user.add_tag_count(tag)
                     del posts[parentId]
@@ -125,7 +128,11 @@ edges = etree.SubElement(gexf, 'edges')
 
 #build nodes and edges
 counter = 0
+usersWithNoEdge = 0
 for user in users.values():
+    if not user.hasEdge:
+        usersWithNoEdge += 1
+        continue
     node = etree.SubElement(nodes, 'node')
     node.set('id', user.id)
     node.set('label', user.displayName)
@@ -154,6 +161,9 @@ del users
 
 #write xml file (gexf file)
 tree = etree.ElementTree(gexf)
-f = codecs.open(dataLocation+'/graph.gexf', 'w', "utf-8")
+f = codecs.open(dataLocation+'graph.gexf', 'w', "utf-8")
 f.write(minidom.parseString(etree.tostring(gexf, encoding="utf-8")).toprettyxml())
+f.close()
+f = open(dataLocation+'numberOfUsersWithNoEdge.txt', 'w')
+f.write(str(usersWithNoEdge))
 f.close()
