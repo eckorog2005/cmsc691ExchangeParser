@@ -4,20 +4,19 @@ import sys
 import codecs
 import xml.etree.cElementTree as etree
 import xml.dom.minidom as minidom
-#import lxml as etree
 import logging
 
 #define user class
 class User:
     def __init__(self, id, reputation, displayName, upVotes, downVotes):
-       self.id = id
-       self.reputation = reputation
-       self.displayName = displayName
-       self.upVotes = upVotes
-       self.downVotes = downVotes
-       self.acceptedAnswersPost = []
-       self.tags = {}
-       self.hasEdge = False
+        self.id = id
+        self.reputation = reputation
+        self.displayName = displayName
+        self.upVotes = upVotes
+        self.downVotes = downVotes
+        self.acceptedAnswersPost = []
+        self.tags = {}
+        self.hasEdge = False
 
     def add_accepted_answer(self, postID):
         self.acceptedAnswersPost.append(postID)
@@ -36,6 +35,7 @@ class User:
                 topAmount = amount
                 topTagName = tagName
         return topTagName
+
 
 class Post:
     def __init__(self, id, ownerId, accepted):
@@ -62,16 +62,17 @@ else:
     sys.exit(2)
 
 # open user file
-f = open(dataLocation+usersFile, 'r')
+f = open(dataLocation + usersFile, 'r')
 tree = etree.iterparse(f)
 for event, row in tree:
     if len(row.attrib.keys()) > 0:
-        user = User(row.attrib['Id'], row.attrib['Reputation'], row.attrib['DisplayName'], row.attrib['UpVotes'], row.attrib['DownVotes'])
+        user = User(row.attrib['Id'], row.attrib['Reputation'], row.attrib['DisplayName'], row.attrib['UpVotes'],
+                    row.attrib['DownVotes'])
         users[user.id] = user
 f.close()
 
 # open post file
-f = open(dataLocation+postsFile, 'r')
+f = open(dataLocation + postsFile, 'r')
 tree = etree.iterparse(f)
 for event, row in tree:
     if len(row.attrib.keys()) > 0:
@@ -151,7 +152,7 @@ for user in users.values():
     attvalue = etree.SubElement(attvalues, 'attvalue')
     attvalue.set('for', '3')
     attvalue.set('value', user.downVotes)
-    for link in user.acceptedAnswersPost:
+    for link in list(set(user.acceptedAnswersPost)):
         edge = etree.SubElement(edges, 'edge')
         edge.set('id', str(counter))
         edge.set('source', user.id)
@@ -161,9 +162,10 @@ del users
 
 #write xml file (gexf file)
 tree = etree.ElementTree(gexf)
-f = codecs.open(dataLocation+'graph.gexf', 'w', "utf-8")
-f.write(minidom.parseString(etree.tostring(gexf, encoding="utf-8")).toprettyxml())
+f = codecs.open(dataLocation + 'graph.gexf', 'w', encoding="utf-8")
+treeString = minidom.parseString(etree.tostring(gexf)).toprettyxml()
+f.write(treeString)
 f.close()
-f = open(dataLocation+'numberOfUsersWithNoEdge.txt', 'w')
+f = open(dataLocation + 'numberOfUsersWithNoEdge.txt', 'w')
 f.write(str(usersWithNoEdge))
 f.close()
