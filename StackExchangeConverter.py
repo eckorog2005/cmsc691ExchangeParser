@@ -4,7 +4,7 @@ import sys
 import codecs
 import xml.etree.cElementTree as etree
 import xml.dom.minidom as minidom
-import logging
+import distutils.util
 
 #define user class
 class User:
@@ -14,12 +14,12 @@ class User:
         self.displayName = displayName
         self.upVotes = upVotes
         self.downVotes = downVotes
-        self.acceptedAnswersPost = []
+        self.answered = []
         self.tags = {}
         self.hasEdge = False
 
-    def add_accepted_answer(self, postID):
-        self.acceptedAnswersPost.append(postID)
+    def add_answer(self, postID):
+        self.answered.append(postID)
 
     def add_tag_count(self, tagName):
         if tagName in self.tags:
@@ -50,15 +50,19 @@ class Post:
 #list of users
 users = {}
 posts = {}
+tagsDict = {}
 
 #get command line arguments for files
 usersFile = 'Users.xml'
 postsFile = 'Posts.xml'
+tagFile = 'Tags.xml'
 dataLocation = ''
-if len(sys.argv) == 2:
+acceptedOnlyAnswers = 1
+if len(sys.argv) == 3:
     dataLocation = sys.argv[1]
+    acceptedOnlyAnswers = distutils.util.strtobool(sys.argv[2])
 else:
-    print("default usage : StackExchangeConverter.py dataDirectory")
+    print("default usage : StackExchangeConverter.py dataDirectory acceptedAnswersOnlyFlag")
     sys.exit(2)
 
 # open user file
@@ -96,16 +100,32 @@ for event, row in tree:
             parentId = row.attrib['ParentId']
             post = posts.get(parentId, None)
             if post is not None:
-                if post.accepted == row.attrib['Id'] and row.attrib.get('OwnerUserId', None) is not None:
+                if acceptedOnlyAnswers and post.accepted == row.attrib['Id'] and \
+                                row.attrib.get('OwnerUserId', None) is not None:
                     user = users[row.attrib['OwnerUserId']]
-                    user.add_accepted_answer(post.ownerId)
+                    user.add_answer(post.ownerId)
                     user.hasEdge = True
                     users[post.ownerId].hasEdge = True
                     for tag in post.tags:
                         user.add_tag_count(tag)
                     del posts[parentId]
+                elif not acceptedOnlyAnswers and row.attrib.get('OwnerUserId', None) is not None:
+                    user = users[row.attrib['OwnerUserId']]
+                    user.add_answer(post.ownerId)
+                    user.hasEdge = True
+                    users[post.ownerId].hasEdge = True
+                    for tag in post.tags:
+                        user.add_tag_count(tag)
 f.close()
 del posts
+
+#read in Tags file
+f = open(dataLocation + tagFile, 'r')
+tree = etree.iterparse(f)
+for event, row in tree:
+    if len(row.attrib.keys()) > 0 and row.attrib.get('TagName', None):
+        tagsDict[row.attrib['TagName']] = row.attrib['Id']
+
 
 #build xml file
 gexf = etree.Element('gexf', xmlns="http://www.gexf.net/1.2draft", version="1.2")
@@ -117,12 +137,17 @@ etree.SubElement(meta, 'description').text = 'Stack Exchange Network'
 graph = etree.SubElement(gexf, 'graph', defaultedgetype="directed")
 attributes = etree.SubElement(graph, 'attributes')
 attributes.set('class', "node")
-etree.SubElement(attributes, 'attribute', id="0", title="Tag", type="string")
-attribute = etree.SubElement(attributes, 'attribute', id="1", title="Reputation", type="integer")
+etree.SubElement(attributes, 'attribute', id="0", title="Tag1", type="string")
+etree.SubElement(attributes, 'attribute', id="1", title="Tag1ID", type="string")
+etree.SubElement(attributes, 'attribute', id="2", title="Tag2", type="string")
+etree.SubElement(attributes, 'attribute', id="3", title="Tag2ID", type="string")
+etree.SubElement(attributes, 'attribute', id="4", title="Tag3", type="string")
+etree.SubElement(attributes, 'attribute', id="5", title="Tag3ID", type="string")
+attribute = etree.SubElement(attributes, 'attribute', id="6", title="Reputation", type="integer")
 etree.SubElement(attribute, 'default').text = 0
-attribute = etree.SubElement(attributes, 'attribute', id="2", title="UpVote", type="integer")
+attribute = etree.SubElement(attributes, 'attribute', id="7", title="UpVote", type="integer")
 etree.SubElement(attribute, 'default').text = 0
-attribute = etree.SubElement(attributes, 'attribute', id="3", title="DownVote", type="integer")
+attribute = etree.SubElement(attributes, 'attribute', id="8", title="DownVote", type="integer")
 etree.SubElement(attribute, 'default').text = 0
 nodes = etree.SubElement(gexf, 'nodes')
 edges = etree.SubElement(gexf, 'edges')
@@ -143,22 +168,26 @@ for user in users.values():
         attvalue = etree.SubElement(attvalues, 'attvalue')
         attvalue.set('for', '0')
         attvalue.set('value', topTag)
+        attvalue = etree.SubElement(attvalues, 'attvalue')
+        attvalue.set('for', '1')
+        attvalue.set('value', tagsDict[topTag])
     attvalue = etree.SubElement(attvalues, 'attvalue')
-    attvalue.set('for', '1')
+    attvalue.set('for', '6')
     attvalue.set('value', user.reputation)
     attvalue = etree.SubElement(attvalues, 'attvalue')
-    attvalue.set('for', '2')
+    attvalue.set('for', '7')
     attvalue.set('value', user.upVotes)
     attvalue = etree.SubElement(attvalues, 'attvalue')
-    attvalue.set('for', '3')
+    attvalue.set('for', '8')
     attvalue.set('value', user.downVotes)
-    for link in list(set(user.acceptedAnswersPost)):
+    for link in list(set(user.answered)):
         edge = etree.SubElement(edges, 'edge')
         edge.set('id', str(counter))
         edge.set('source', user.id)
         edge.set('target', link)
         counter += 1
 del users
+del tagsDict
 
 #write xml file (gexf file)
 tree = etree.ElementTree(gexf)
