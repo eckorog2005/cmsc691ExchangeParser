@@ -27,14 +27,18 @@ class User:
         else:
             self.tags[tagName] = 1
 
-    def get_top_tag(self):
-        topTagName = ''
-        topAmount = 0
+    def get_top_tags(self):
+        # topTagName = ''
+        # topAmount = 0
+        # for tagName, amount in self.tags.items():
+        #     if amount > topAmount:
+        #         topAmount = amount
+        #         topTagName = tagName
+        # return topTagName
+        tagList = []
         for tagName, amount in self.tags.items():
-            if amount > topAmount:
-                topAmount = amount
-                topTagName = tagName
-        return topTagName
+            tagList.append(Tag(tagName,amount))
+        return sorted(tagList, key=lambda tagobj: tagobj.number, reverse=True)
 
 
 class Post:
@@ -47,6 +51,11 @@ class Post:
     def add_tags(self, tags):
         self.tags = tags
 
+class Tag:
+    def __init__(self, tag, number):
+        self.tag = tag
+        self.number = number
+
 #list of users
 users = {}
 posts = {}
@@ -55,7 +64,6 @@ tagsDict = {}
 #get command line arguments for files
 usersFile = 'Users.xml'
 postsFile = 'Posts.xml'
-tagFile = 'Tags.xml'
 dataLocation = ''
 acceptedOnlyAnswers = 1
 if len(sys.argv) == 3:
@@ -119,14 +127,6 @@ for event, row in tree:
 f.close()
 del posts
 
-#read in Tags file
-f = open(dataLocation + tagFile, 'r')
-tree = etree.iterparse(f)
-for event, row in tree:
-    if len(row.attrib.keys()) > 0 and row.attrib.get('TagName', None):
-        tagsDict[row.attrib['TagName']] = row.attrib['Id']
-
-
 #build xml file
 gexf = etree.Element('gexf', xmlns="http://www.gexf.net/1.2draft", version="1.2")
 gexf.set('xmlns:xsi', "http://www.w3.org/2001/XMLSchema-instance")
@@ -138,16 +138,13 @@ graph = etree.SubElement(gexf, 'graph', defaultedgetype="directed")
 attributes = etree.SubElement(graph, 'attributes')
 attributes.set('class', "node")
 etree.SubElement(attributes, 'attribute', id="0", title="Tag1", type="string")
-etree.SubElement(attributes, 'attribute', id="1", title="Tag1ID", type="string")
-etree.SubElement(attributes, 'attribute', id="2", title="Tag2", type="string")
-etree.SubElement(attributes, 'attribute', id="3", title="Tag2ID", type="string")
-etree.SubElement(attributes, 'attribute', id="4", title="Tag3", type="string")
-etree.SubElement(attributes, 'attribute', id="5", title="Tag3ID", type="string")
-attribute = etree.SubElement(attributes, 'attribute', id="6", title="Reputation", type="integer")
+etree.SubElement(attributes, 'attribute', id="1", title="Tag2", type="string")
+etree.SubElement(attributes, 'attribute', id="2", title="Tag3", type="string")
+attribute = etree.SubElement(attributes, 'attribute', id="3", title="Reputation", type="integer")
 etree.SubElement(attribute, 'default').text = 0
-attribute = etree.SubElement(attributes, 'attribute', id="7", title="UpVote", type="integer")
+attribute = etree.SubElement(attributes, 'attribute', id="4", title="UpVote", type="integer")
 etree.SubElement(attribute, 'default').text = 0
-attribute = etree.SubElement(attributes, 'attribute', id="8", title="DownVote", type="integer")
+attribute = etree.SubElement(attributes, 'attribute', id="5", title="DownVote", type="integer")
 etree.SubElement(attribute, 'default').text = 0
 nodes = etree.SubElement(gexf, 'nodes')
 edges = etree.SubElement(gexf, 'edges')
@@ -163,22 +160,21 @@ for user in users.values():
     node.set('id', user.id)
     node.set('label', user.displayName)
     attvalues = etree.SubElement(node, 'attvalues')
-    topTag = user.get_top_tag()
-    if topTag is not '':
+    topTags = user.get_top_tags()
+    counterFor = 0
+    for tag in topTags[:3]:
         attvalue = etree.SubElement(attvalues, 'attvalue')
-        attvalue.set('for', '0')
-        attvalue.set('value', topTag)
-        attvalue = etree.SubElement(attvalues, 'attvalue')
-        attvalue.set('for', '1')
-        attvalue.set('value', tagsDict[topTag])
+        attvalue.set('for', str(counterFor))
+        counterFor += 1
+        attvalue.set('value', tag.tag)
     attvalue = etree.SubElement(attvalues, 'attvalue')
-    attvalue.set('for', '6')
+    attvalue.set('for', '3')
     attvalue.set('value', user.reputation)
     attvalue = etree.SubElement(attvalues, 'attvalue')
-    attvalue.set('for', '7')
+    attvalue.set('for', '4')
     attvalue.set('value', user.upVotes)
     attvalue = etree.SubElement(attvalues, 'attvalue')
-    attvalue.set('for', '8')
+    attvalue.set('for', '5')
     attvalue.set('value', user.downVotes)
     for link in list(set(user.answered)):
         edge = etree.SubElement(edges, 'edge')
