@@ -87,12 +87,17 @@ etree.SubElement(meta, 'description').text = 'Stack Exchange Network'
 graph = etree.SubElement(gexf, 'graph', defaultedgetype="directed")
 attributes = etree.SubElement(graph, 'attributes')
 attributes.set('class', "node")
-etree.SubElement(attributes, 'attribute', id="0", title="Tag", type="string")
-attribute = etree.SubElement(attributes, 'attribute', id="1", title="Reputation", type="integer")
-attribute = etree.SubElement(attributes, 'attribute', id="2", title="UpVote", type="integer")
-attribute = etree.SubElement(attributes, 'attribute', id="3", title="DownVote", type="integer")
-nodes = etree.SubElement(graph, 'nodes')
-edges = etree.SubElement(graph, 'edges')
+etree.SubElement(attributes, 'attribute', id="0", title="Tag1", type="string")
+etree.SubElement(attributes, 'attribute', id="1", title="Tag2", type="string")
+etree.SubElement(attributes, 'attribute', id="2", title="Tag3", type="string")
+attribute = etree.SubElement(attributes, 'attribute', id="3", title="Reputation", type="integer")
+etree.SubElement(attribute, 'default').text = 0
+attribute = etree.SubElement(attributes, 'attribute', id="4", title="UpVote", type="integer")
+etree.SubElement(attribute, 'default').text = 0
+attribute = etree.SubElement(attributes, 'attribute', id="5", title="DownVote", type="integer")
+etree.SubElement(attribute, 'default').text = 0
+nodes = etree.SubElement(gexf, 'nodes')
+edges = etree.SubElement(gexf, 'edges')
 
 #build nodes and edges
 counter = 0
