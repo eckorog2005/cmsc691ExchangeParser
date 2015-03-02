@@ -7,14 +7,15 @@ nx.set_node_attributes(G, 'degreeCentrality', cent)
 nx.write_gexf(G, "graphDegreeCent.gexf")
 
 max = 0
-for value in cent.values():
+outDegree = list(G.out_degree().values())
+for value in outDegree:
     if value > max:
         max = value
 
 result = 0
 numOfNodes = nx.number_of_nodes(G)
-for value in cent.values():
+for value in outDegree:
     result += (max - value)
 
-result /= (numOfNodes - 1) * (numOfNodes - 2)
+result /= (numOfNodes - 1) * float(numOfNodes - 2)
 print result
