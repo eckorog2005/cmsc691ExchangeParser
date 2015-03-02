@@ -141,13 +141,10 @@ etree.SubElement(attributes, 'attribute', id="0", title="Tag1", type="string")
 etree.SubElement(attributes, 'attribute', id="1", title="Tag2", type="string")
 etree.SubElement(attributes, 'attribute', id="2", title="Tag3", type="string")
 attribute = etree.SubElement(attributes, 'attribute', id="3", title="Reputation", type="integer")
-etree.SubElement(attribute, 'default').text = 0
 attribute = etree.SubElement(attributes, 'attribute', id="4", title="UpVote", type="integer")
-etree.SubElement(attribute, 'default').text = 0
 attribute = etree.SubElement(attributes, 'attribute', id="5", title="DownVote", type="integer")
-etree.SubElement(attribute, 'default').text = 0
-nodes = etree.SubElement(gexf, 'nodes')
-edges = etree.SubElement(gexf, 'edges')
+nodes = etree.SubElement(graph, 'nodes')
+edges = etree.SubElement(graph, 'edges')
 
 #build nodes and edges
 counter = 0
